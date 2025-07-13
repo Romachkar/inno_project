@@ -19,9 +19,9 @@ async def generate_universities(data):
                 "https://openrouter.ai/api/v1/chat/completions",
                 headers={"Authorization": f"Bearer {os.getenv('OPENROUTER_API_KEY')}"},
                 json={
-                    "model": "",
+                    "model": "deepseek/deepseek-r1:free",
                     "messages": [{"role": "user", "content": prompt}],
-                    "max_tokens": 10000000
+                    "max_tokens": 2000
                 },
                 timeout=30
             )
@@ -36,7 +36,7 @@ async def generate_universities(data):
                 return "⚠ Не удалось получить рекомендации"
 
             raw_response = response_data["choices"][0]["message"]["content"]
-            formatted_response = raw_response.replace("1.", "📌").replace("2.", "📌").replace("3.", "📌")
+            formatted_response = raw_response.replace
             return formatted_response
 
         except Exception as e:
