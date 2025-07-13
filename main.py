@@ -1,24 +1,17 @@
-from aiogram import Dispatcher, Bot
-from aiogram.filters import Command
-from aiogram.types import Message
-from aiogram.client.default import DefaultBotProperties
-from aiogram.enums import ParseMode
-
-from dotenv import load_dotenv
 import os
+from aiogram import Bot, Dispatcher
+from aiogram.fsm.storage.memory import MemoryStorage
+from handlers import register_handlers
+from dotenv import load_dotenv
 
-import asyncio
-from handlers.commands import command_router
 load_dotenv()
-TOKEN = os.getenv("BOT_TOKEN")
 
-dp = Dispatcher()
-dp.include_router(command_router)
+telegram_bot = Bot(token=os.getenv("BOT_TOKEN"))
+storage = MemoryStorage()
+dispatcher = Dispatcher(storage=storage)
 
-async def main():
-    bot = Bot(token=TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
-    await dp.start_polling(bot)
-
+register_handlers(dispatcher)
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    import asyncio
+    asyncio.run(dispatcher.start_polling(telegram_bot))
