@@ -5,7 +5,7 @@ from keyboards.inline import directions
 from states.university import UserStates
 from utils.openrouter import generate_universities
 import logging
-
+import re
 logger = logging.getLogger(__name__)
 router = Router()
 
@@ -43,19 +43,25 @@ async def process_direction(callback: CallbackQuery, state: FSMContext):
 
 @router.message(UserStates.score)
 async def process_scores(message: Message, state: FSMContext):
-    try:
-        score = list(map(int, message.text.split()))
-        if any(score < 0 or score > 100 for score in score):
-            raise ValueError
-    except:
-        await message.answer("❌ Неверный формат баллов. Введите числа от 0 до 100 через пробел")
-        return
+    lines = [line.strip() for line in message.text.split("\n") if line.strip()]
+    scores = {}
+
+    for line in lines:
+        match = re.match(r'^(.+?)\s+(\d+)$', line)
+        if not match:
+            await message.answer(f"❌ Ошибка в строке: {line}")
+            return
+        subject = match.group(1).strip()
+        score = int(match.group(2))
+        scores[subject] = score
 
     data = await state.get_data()
-    data["scores"] = score
+    data["scores"] = scores
+    await state.clear()
 
     recommendations = await generate_universities(data)
+    if not isinstance(recommendations, str):
+        recommendations = "⚠ Не удалось получить рекомендации"
 
     await message.answer("🎓 Подходящие вузы:")
     await message.answer(recommendations)
-    await state.clear()
