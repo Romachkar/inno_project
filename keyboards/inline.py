@@ -21,7 +21,19 @@ LOCATION_KB_BUILDER.add(InlineKeyboardButton(text="🔙 Назад", callback_da
 LOCATION_KB_BUILDER.adjust(2)
 LOCATION_KB = LOCATION_KB_BUILDER.as_markup()
 
+ACHIEVEMENTS_KB_BUILDER = InlineKeyboardBuilder()
+ACHIEVEMENTS_KB_BUILDER.add(
+    InlineKeyboardButton(text="🏅 Олимпиады", callback_data="achievement:olympic"),
+    InlineKeyboardButton(text="📚 Портфолио", callback_data="achievement:portfolio"),
+    InlineKeyboardButton(text="🌍 Волонтерство", callback_data="achievement:volunteer"),
+    InlineKeyboardButton(text="Научные проекты", callback_data="achievement:projects"),
+    InlineKeyboardButton(text="🏅 Золотая медаль", callback_data="achievement:zoloto")
+)
+ACHIEVEMENTS_KB_BUILDER.add(InlineKeyboardButton(text="✅ Подтвердить", callback_data="achievements_done"))
+ACHIEVEMENTS_KB_BUILDER.add(InlineKeyboardButton(text="🔙 Назад", callback_data="main_menu"))
+ACHIEVEMENTS_KB_BUILDER.adjust(2)
 
+ACHIEVEMENTS_KB = ACHIEVEMENTS_KB_BUILDER.as_markup()
 DIRECTION_KB_BUILDER = InlineKeyboardBuilder()
 DIRECTION_KB_BUILDER.add(
     InlineKeyboardButton(text="💻 IT/Программирование", callback_data="direction:it"),

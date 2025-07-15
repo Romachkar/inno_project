@@ -30,6 +30,18 @@ async def generate_universities(data):
     else:
         prompt += f"Города: {', '.join(data['cities'])}\n"
 
+    if "achievements" in data:
+        prompt += f"🏆 Индивидуальные достижения: {data['achievements']}\n"
+
+    if "achievements" in data:
+        achievements_text = ", ".join({
+        "olympic": "Олимпиады",
+        "portfolio": "Портфолио",
+        "volunteer": "Волонтерство",
+        "projects": "Научные проекты"
+        }.get(a, a) for a in data["achievements"])
+        prompt += f"🏆 Индивидуальные достижения: {achievements_text}\n"
+
     prompt += f"Направление: {data['direction']}\n"
     scores_text = "\n".join(f"- {subj}: {score}" for subj, score in data["scores"].items())
     prompt += f"Баллы ЕГЭ:\n{scores_text}\n"
@@ -43,7 +55,7 @@ async def generate_universities(data):
                 json={
                     "model": "tngtech/deepseek-r1t2-chimera:free",
                     "messages": [{"role": "user", "content": prompt}],
-                    "max_tokens": 5000
+                    "max_tokens": 4000
                 },
                 timeout=30
             )
