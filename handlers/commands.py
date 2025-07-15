@@ -2,13 +2,11 @@ from aiogram import Router
 from aiogram.types import Message
 from aiogram.filters import CommandStart
 from aiogram.fsm.context import FSMContext
-from states.university import UserStates
+from keyboards.inline import MAIN_MENU_KB
 
 router = Router()
 
 @router.message(CommandStart())
 async def start_command(message: Message, state: FSMContext):
-    await message.answer(
-        "Привет! Я помогу подобрать тебе вуз по твоим баллам за экзамен и предпочтениям. Сначала введите города через запятую (например: Москва, Санкт-Петербург)"
-    )
-    await state.set_state(UserStates.cities)
+    await state.clear()
+    await message.answer("🎓 Добро пожаловать! Выберите действие:", reply_markup=MAIN_MENU_KB)

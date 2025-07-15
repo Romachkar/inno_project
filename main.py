@@ -6,12 +6,14 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-telegram_bot = Bot(token=os.getenv("BOT_TOKEN"))
+bot = Bot(token=os.getenv("BOT_TOKEN"))
 storage = MemoryStorage()
-dispatcher = Dispatcher(storage=storage)
+dp = Dispatcher(storage=storage)
 
-register_handlers(dispatcher)
 
+register_handlers(dp)
+
+#
 if __name__ == "__main__":
     import asyncio
-    asyncio.run(dispatcher.start_polling(telegram_bot))
+    asyncio.run(dp.start_polling(bot))
