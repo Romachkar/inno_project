@@ -1,33 +1,66 @@
 import sqlite3
-from datetime import datetime
-from aiogram import Router
-from aiogram.types import Message
-from aiogram.filters import Command
+import logging
+from typing import List, Dict
+
+logger = logging.getLogger(__name__)
 
 
-def __init__(self):
-    self.conn = sqlite3.connect('university.db', check_same_thread=False)
-    self._init_db()
+class Database:
+    def __init__(self):
+        self.conn = sqlite3.connect('edu_tutor.db', check_same_thread=False)
+        self._init_db()
 
-def _init_db(self):
-    with self.conn:
-        self.conn.execute('''
-            CREATE TABLE IF NOT EXISTS queries (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_id INTEGER,
-                query_text TEXT,
-                response TEXT,
-                timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )''')
+    def _init_db(self):
+        try:
+            with self.conn:
+                self.conn.execute('''
+                    CREATE TABLE IF NOT EXISTS queries (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        user_id INTEGER,
+                        query_text TEXT,
+                        response TEXT,
+                        timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )''')
+                self.conn.execute('''
+                    CREATE TABLE IF NOT EXISTS users (
+                        user_id INTEGER PRIMARY KEY,
+                        username TEXT,
+                        full_name TEXT,
+                        is_blocked BOOLEAN DEFAULT 0,
+                        block_reason TEXT,
+                        registered_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )''')
+        except sqlite3.Error as e:
+            logger.error(f"Ошибка при инициализации БД: {str(e)}")
 
-def log_query(self, user_id: int, query_text: str, response: str) -> bool:
-    try:
-        self.conn.execute('''
-            INSERT INTO queries (user_id, query_text, response)
-            VALUES (?, ?, ?)
-        ''', (user_id, query_text, response))
-        self.conn.commit()
-        return True
-    except Exception as e:
-        print(f"DB Error: {str(e)}")
-        return False
+    def log_query(self, user_id: int, query_text: str, response: str) -> bool:
+        try:
+            self.conn.execute('''
+                INSERT INTO queries (user_id, query_text, response)
+                VALUES (?, ?, ?)
+            ''', (user_id, query_text, response))
+            self.conn.commit()
+            return True
+        except sqlite3.Error as e:
+            logger.error(f"Ошибка сохранения запроса: {str(e)}")
+            return False
+
+    def get_user_plans(self, user_id: int) -> List[Dict]:
+        try:
+            cursor = self.conn.execute('''
+                SELECT id, query_text, response, timestamp 
+                FROM queries 
+                WHERE user_id = ?
+                ORDER BY timestamp DESC
+            ''', (user_id,))
+            return [{
+                'id': row[0],
+                'query_text': row[1],
+                'response': row[2],
+                'timestamp': row[3]
+            } for row in cursor.fetchall()]
+        except sqlite3.Error as e:
+            logger.error(f"Ошибка получения истории: {str(e)}")
+            return []
+
+db = Database()

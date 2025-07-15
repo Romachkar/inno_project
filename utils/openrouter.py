@@ -9,7 +9,7 @@ async def generate_universities(data):
     prompt = f"""
 Ты — квалифицированный помощник в выборе вузов для поступления. Учитывая предоставленные данные, ты должен подобрать наиболее подходящие варианты вузов, где абитуриент имеет высокие шансы на зачисление. 
 Дополнительные параметры: бюджетное место / платное, форма обучения (очная / заочная), престиж вуза, наличие общежития, военная кафедра, международные программы и т.д.
-На основе этих данных предложи ТОП-4 вузов, которые:
+На основе этих данных предложи ТОП-10, если задан 5 городов, если задано 4 города 8 вузов, если 3 то 6, а если 2 то 5 и на 1 город 5 в  узов, которые:
 
 Соответствуют уровню ЕГЭ.
 Расположены в желаемых регионах.
@@ -38,12 +38,12 @@ async def generate_universities(data):
     async with httpx.AsyncClient() as client:
         try:
             response = await client.post(
-                "https://openrouter.ai/api/v1/chat/completions ",
+                "https://openrouter.ai/api/v1/chat/completions",
                 headers={"Authorization": f"Bearer {os.getenv('OPENROUTER_API_KEY')}"},
                 json={
                     "model": "tngtech/deepseek-r1t2-chimera:free",
                     "messages": [{"role": "user", "content": prompt}],
-                    "max_tokens": 1000
+                    "max_tokens": 5000
                 },
                 timeout=30
             )
