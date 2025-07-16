@@ -7,3 +7,4 @@ class UniversityForm(StatesGroup):
     achievements = State()
     direction = State()
     scores = State()
+    lang = State()
