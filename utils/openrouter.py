@@ -45,15 +45,16 @@ async def generate_universities(data):
     prompt += f"Направление: {data['direction']}\n"
     scores_text = "\n".join(f"- {subj}: {score}" for subj, score in data["scores"].items())
     prompt += f"Баллы ЕГЭ:\n{scores_text}\n"
-    prompt += """ПИШИ ТОЛЬКО НА РУССКОМ, КРАСИВОЕ ФОРМАТИРОВАНИЕ ТЕКСТА, подробно про каждый университет, так же примерно переведи баллы егэ в систему оценивания знаний в той стране в которую хочет поступить пользователь"""
-
+    prompt += """ПИШИ ТОЛЬКО НА РУССКОМ, КРАСИВОЕ ФОРМАТИРОВАНИЕ ТЕКСТА, подробно про каждый университет, больше важной информации для пользователя, меньше воды """
+    prompt += "ПИШИ ТЕКСТ БЕЗ ИСПОЛЬЗОВАНИЯ '###'"
+    prompt += "ПИШИ ТЕКСТ БЫСТРО, так же учитывай какие предметы пользователь сдавал, если он сдавал предметы не подходящие по его направление"
     async with httpx.AsyncClient() as client:
         try:
             response = await client.post(
                 "https://openrouter.ai/api/v1/chat/completions",
                 headers={"Authorization": f"Bearer {os.getenv('OPENROUTER_API_KEY')}"},
                 json={
-                    "model": "tngtech/deepseek-r1t2-chimera:free",
+                    "model": "deepseek/deepseek-chat-v3-0324:free",
                     "messages": [{"role": "user", "content": prompt}],
                     "max_tokens": 4000
                 },

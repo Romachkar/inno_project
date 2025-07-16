@@ -6,8 +6,7 @@ MAIN_MENU_KB_BUILDER = InlineKeyboardBuilder()
 MAIN_MENU_KB_BUILDER.add(
     InlineKeyboardButton(text="🎓 Старт", callback_data="create_plan"),
     InlineKeyboardButton(text="📜 История", callback_data="my_history"),
-    InlineKeyboardButton(text="ℹ Помощь", callback_data="help"),
-    InlineKeyboardButton(text="Язык", callback_data="lang")
+    InlineKeyboardButton(text="ℹ Помощь", callback_data="help")
 )
 MAIN_MENU_KB_BUILDER.adjust(2)
 MAIN_MENU_KB = MAIN_MENU_KB_BUILDER.as_markup()
