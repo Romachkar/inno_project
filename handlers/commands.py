@@ -6,7 +6,6 @@ from keyboards.inline import MAIN_MENU_KB
 
 router = Router()
 
-# 🧭 Главное меню
 @router.message(CommandStart())
 async def start_command(message: Message, state: FSMContext):
     await state.clear()
