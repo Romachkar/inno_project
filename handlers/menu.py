@@ -56,8 +56,8 @@ async def show_history(callback: CallbackQuery, state: FSMContext):
 @router.callback_query(F.data == "help")
 async def help_command(callback: CallbackQuery, state: FSMContext):
     help_text = (
-        "📚 **Как со мной работать**:\n\n"
-        "1. Нажмите **«Создать план»** и выберите страну\n"
+        "📚 Как со мной работать:\n\n"
+        "1. Нажмите «Создать план» и выберите страну\n"
         "2. Введите город или страну\n"
         "3. Выберите направление\n"
         "4. Введите баллы ЕГЭ в формате:\n"
@@ -66,7 +66,6 @@ async def help_command(callback: CallbackQuery, state: FSMContext):
         "Русский язык 100\n"
         "Информатика 100"
     )
-
     if callback.message.text != help_text:
         await callback.message.edit_text(help_text, reply_markup=BACK_KB)
 
@@ -170,7 +169,7 @@ async def process_scores(message: Message, state: FSMContext):
 
     await message.answer("🕒 Генерируем рекомендации...")
     recommendations = await generate_universities(data)
-    recommendations = re.sub(r"^(.#)\s+(\d+)$", recommendations)
+    recommendations = re.sub(r'#+', '', recommendations)
     await message.answer("🎓 Подходящие вузы:")
     await message.answer(recommendations, parse_mode='Markdown')
     await message.answer("🔍 Начать поиск снова?", reply_markup=MAIN_MENU_KB)
