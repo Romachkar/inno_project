@@ -19,8 +19,10 @@ class Database:
                         user_id INTEGER,
                         query_text TEXT,
                         response TEXT,
-                        timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                        achievements TEXT,  # Новое поле для достижений
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                     )''')
+
                 self.conn.execute('''
                     CREATE TABLE IF NOT EXISTS users (
                         user_id INTEGER PRIMARY KEY,
@@ -30,37 +32,60 @@ class Database:
                         block_reason TEXT,
                         registered_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                     )''')
+
+                self.conn.commit()
+
         except sqlite3.Error as e:
             logger.error(f"Ошибка при инициализации БД: {str(e)}")
+            self.conn.rollback()
 
-    def log_query(self, user_id: int, query_text: str, response: str) -> bool:
+    def log_query(self, user_id: int, query_text: str, response: str, achievements: str = "") -> bool:
         try:
-            self.conn.execute('''
-                INSERT INTO queries (user_id, query_text, response)
-                VALUES (?, ?, ?)
-            ''', (user_id, query_text, response))
-            self.conn.commit()
+            with self.conn:
+                self.conn.execute('''
+                    INSERT INTO queries (user_id, query_text, response, achievements, created_at)
+                    VALUES (?, ?, ?, ?, datetime('now'))
+                ''', (user_id, query_text, response, achievements))
+                self.conn.commit()
             return True
         except sqlite3.Error as e:
             logger.error(f"Ошибка сохранения запроса: {str(e)}")
+            self.conn.rollback()
             return False
 
     def get_user_plans(self, user_id: int) -> List[Dict]:
         try:
-            cursor = self.conn.execute('''
-                SELECT id, query_text, response, timestamp 
-                FROM queries 
-                WHERE user_id = ?
-                ORDER BY timestamp DESC
-            ''', (user_id,))
-            return [{
-                'id': row[0],
-                'query_text': row[1],
-                'response': row[2],
-                'timestamp': row[3]
-            } for row in cursor.fetchall()]
+            with self.conn:
+                cursor = self.conn.execute('''
+                    SELECT id, query_text, response, achievements,
+                           strftime('%Y-%m-%d %H:%M', created_at) as formatted_date
+                    FROM queries 
+                    WHERE user_id = ?
+                    ORDER BY created_at DESC
+                ''', (user_id,))
+
+                return [{
+                    'id': row[0],
+                    'query_text': row[1],
+                    'response': row[2],
+                    'achievements': row[3] or "",
+                    'timestamp': row[4]
+                } for row in cursor.fetchall()]
+
         except sqlite3.Error as e:
             logger.error(f"Ошибка получения истории: {str(e)}")
             return []
+
+    def clear_user_history(self, user_id: int) -> bool:
+        try:
+            with self.conn:
+                self.conn.execute('DELETE FROM queries WHERE user_id = ?', (user_id,))
+                self.conn.commit()
+            return True
+        except sqlite3.Error as e:
+            logger.error(f"Ошибка очистки истории: {str(e)}")
+            self.conn.rollback()
+            return False
+
 
 db = Database()

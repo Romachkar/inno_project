@@ -2,6 +2,7 @@ from aiogram.filters import CommandStart
 from aiogram.types import InlineKeyboardButton
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 import logging
+import sqlite3
 from utils.database import db
 import re
 from aiogram import Router, F
@@ -13,25 +14,9 @@ from utils.openrouter import generate_universities
 logger = logging.getLogger(__name__)
 router = Router()
 
-
 def get_user_name(event: Message | CallbackQuery) -> str:
-
-    if isinstance(event, Message):
-        user = event.from_user
-    else:
-        user = event.from_user
-
-    if user.full_name:
-        return user.full_name
-    elif user.username:
-        return f"@{user.username}"
-    else:
-        return "Пользователь"
-
-@router.callback_query(F.data == "main_menu")
-@router.message(CommandStart())
-async def main_menu(event: Message | CallbackQuery, state: FSMContext):
-    await state.clear()
+    user = event.from_user
+    return user.full_name or f"@{user.username}" or "Пользователь"
 
 
 @router.callback_query(F.data == "main_menu")
@@ -39,15 +24,16 @@ async def main_menu(event: Message | CallbackQuery, state: FSMContext):
 async def main_menu(event: Message | CallbackQuery, state: FSMContext):
     await state.clear()
     user_name = get_user_name(event)
-    if isinstance(event, CallbackQuery):
-        await event.message.edit_text(f"👋 Привет, {user_name}! Выбери действие:",reply_markup=MAIN_MENU_KB)
-    else:
-        await event.answer(f"👋 Привет, {user_name}! Выбери действие:", reply_markup=MAIN_MENU_KB)
+    text = f"👋 Привет, {user_name}! Выбери действие:"
 
+    if isinstance(event, CallbackQuery):
+        await event.message.edit_text(text, reply_markup=MAIN_MENU_KB)
+    else:
+        await event.answer(text, reply_markup=MAIN_MENU_KB)
 
 
 @router.callback_query(F.data == "my_history")
-async def show_history(callback: CallbackQuery, state: FSMContext):
+async def show_history(callback: CallbackQuery):
     user_id = callback.from_user.id
     history = db.get_user_plans(user_id)
 
@@ -57,63 +43,27 @@ async def show_history(callback: CallbackQuery, state: FSMContext):
 
     kb = InlineKeyboardBuilder()
     for entry in history:
-        kb.button(text=f"{entry['query_text']} ({entry['timestamp']})", callback_data=f"view_plan_{entry['id']}")
+        timestamp = entry['timestamp'].split()[0] if entry['timestamp'] else "N/A"
+        kb.add(InlineKeyboardButton(
+            text=f"{entry['query_text']} ({timestamp})",
+            callback_data=f"view_plan_{entry['id']}"
+        ))
     kb.add(InlineKeyboardButton(text="🔙 Назад", callback_data="main_menu"))
     kb.adjust(1)
 
-    await callback.message.edit_text("📜 Ваши запросы:")
-    await callback.message.edit_reply_markup(reply_markup=kb.as_markup())
-    kb = InlineKeyboardBuilder()
-    for entry in history:
-        kb.button(text=f"{entry['query_text']} ({entry['timestamp']})", callback_data=f"view_plan_{entry['id']}")
-    kb.add(InlineKeyboardButton(text="🔙 Назад", callback_data="main_menu"))
-    kb.adjust(1)
-
-    await callback.message.edit_text("📜 Ваши запросы:")
-    await callback.message.edit_reply_markup(reply_markup=kb.as_markup())
+    await callback.message.edit_text("📜 Ваши запросы:", reply_markup=kb.as_markup())
 
 
-@router.callback_query(F.data == "my_plans")
-async def my_plans(callback: CallbackQuery, state: FSMContext):
+@router.callback_query(F.data == "clear_history")
+async def clear_history(callback: CallbackQuery):
     user_id = callback.from_user.id
-    plans = db.get_user_plans(user_id)
-
-    if not plans:
-        if callback.message.text != "📜 У вас ещё нет истории запросов":
-            await callback.message.edit_text("📜 У вас ещё нет истории запросов", reply_markup=BACK_KB)
-        return
-
-    kb = InlineKeyboardBuilder()
-    for plan in plans:
-        kb.button(
-            text=f"{plan['query_text']} ({plan['timestamp']})",
-            callback_data=f"view_plan_{plan['id']}"
-        )
-    kb.add(InlineKeyboardButton(text="🗑 Очистить историю", callback_data="clear_history"))
-    kb.add(InlineKeyboardButton(text="🔙 Назад", callback_data="main_menu"))
-    kb.adjust(1)
-
-    if callback.message.text.startswith("🎓 Добро пожаловать!"):
-        await callback.message.edit_text("📜 Ваши запросы:")
-        await callback.message.edit_reply_markup(reply_markup=kb.as_markup())
-    else:
-        await callback.message.answer("📜 Ваши запросы:", reply_markup=kb.as_markup())
-
-@router.callback_query(F.data == "help")
-async def help_command(callback: CallbackQuery, state: FSMContext):
-    help_text = (
-        "📚 Как со мной работать:\n\n"
-        "1. Нажмите «Создать план» и выберите страну\n"
-        "2. Введите город или страну\n"
-        "3. Выберите направление\n"
-        "4. Введите баллы ЕГЭ в формате:\n"
-        "Пример:\n"
-        "Проф. мат 100\n"
-        "Русский язык 100\n"
-        "Информатика 100"
-    )
-    if callback.message.text != help_text:
-        await callback.message.edit_text(help_text, reply_markup=BACK_KB)
+    try:
+        db.conn.execute('DELETE FROM queries WHERE user_id = ?', (user_id,))
+        db.conn.commit()
+        await callback.message.edit_text("✅ История запросов очищена", reply_markup=BACK_KB)
+    except sqlite3.Error as e:
+        logger.error(f"Ошибка очистки истории: {str(e)}")
+        await callback.message.edit_text("❌ Не удалось очистить историю", reply_markup=BACK_KB)
 
 
 @router.callback_query(F.data == "create_plan")
@@ -130,13 +80,11 @@ async def handle_location(callback: CallbackQuery, state: FSMContext):
     if location_type == "russia":
         await callback.message.edit_text("🏙 Введите город в России:")
         await state.set_state(UniversityForm.cities_russia)
-
     elif location_type == "other":
         await callback.message.edit_text("🌍 Введите страну и город через запятую (или только страну):")
         await state.set_state(UniversityForm.cities_other)
-
     else:
-        await callback.message.edit_text("🏙 Введите города через запятую:")
+        await callback.message.edit_text("🌐 Введите города через запятую:")
         await state.set_state(UniversityForm.cities_other)
 
 
@@ -144,8 +92,8 @@ async def handle_location(callback: CallbackQuery, state: FSMContext):
 async def process_city_russia(message: Message, state: FSMContext):
     city = message.text.strip()
     await state.update_data(cities=[city])
-    await message.answer("✍️ Введите ваши индивидуальные достижения (например: олимпиады, проекты, волонтерство):")
-    await state.set_state(UniversityForm.achievements)
+    await message.answer("🧭 Выберите направление:", reply_markup=DIRECTION_KB)
+    await state.set_state(UniversityForm.direction)
 
 
 @router.message(UniversityForm.cities_other)
@@ -157,36 +105,22 @@ async def process_location_other(message: Message, state: FSMContext):
 
     await state.update_data(cities=locations)
     await message.answer("🧭 Выберите направление:", reply_markup=DIRECTION_KB)
-
-
-@router.message(UniversityForm.achievements)
-async def process_achievements(message: Message, state: FSMContext):
-    achievements = message.text.strip()
-    if not achievements:
-        await message.answer("❌ Пожалуйста, введите достижения")
-        return
-
-    await state.update_data(achievements=achievements)
     await state.set_state(UniversityForm.direction)
-    await message.answer(f"🧭 Выберите направление:", reply_markup=DIRECTION_KB)
 
 
 @router.callback_query(F.data.startswith("direction:"))
 async def process_direction(callback: CallbackQuery, state: FSMContext):
     direction = callback.data.split(":")[1]
     await state.update_data(direction=direction)
-
     user_name = get_user_name(callback)
 
-    if callback.message.text != f"✍️ {user_name}, введите баллы ЕГЭ в формате:\nПример:\nПроф. мат 100\nРусский язык 100\nИнформатика 100":
-        await callback.message.edit_text(
-            f"✍️ {user_name}, введите баллы ЕГЭ в формате:\n"
-            "Пример:\n"
-            "Проф. мат 100\n"
-            "Русский язык 100\n"
-            "Информатика 100"
-        )
-
+    await callback.message.edit_text(
+        f"✍️ {user_name}, введите баллы ЕГЭ в формате:\n"
+        "Пример:\n"
+        "Проф. мат 100\n"
+        "Русский язык 100\n"
+        "Информатика 100"
+    )
     await state.set_state(UniversityForm.scores)
 
 
@@ -198,9 +132,8 @@ async def process_scores(message: Message, state: FSMContext):
     for line in lines:
         match = re.match(r"^(.+?)\s+(\d+)$", line)
         if not match:
-            user_name = get_user_name(message)
             await message.answer(
-                f"❌ {user_name}, неверный формат. Используйте:\n"
+                "❌ Неверный формат. Используйте:\n"
                 "Пример:\n"
                 "Проф. мат 100\n"
                 "Русский язык 100\n"
@@ -212,23 +145,40 @@ async def process_scores(message: Message, state: FSMContext):
         score = int(match.group(2))
 
         if not (0 <= score <= 100):
-            user_name = get_user_name(message)
-            await message.answer(
-                f"❌ {user_name}, баллы должны быть от 0 до 100"
-            )
+            await message.answer("❌ Баллы должны быть от 0 до 100")
             return
 
         scores[subject] = score
 
+    await state.update_data(scores=scores)
+    await message.answer("🏆 Введите ваши индивидуальные достижения (олимпиады, проекты, волонтерство и т.д.):")
+    await state.set_state(UniversityForm.achievements)
+
+
+@router.message(UniversityForm.achievements)
+async def process_achievements(message: Message, state: FSMContext):
+    achievements = message.text.strip()
+    if not achievements:
+        await message.answer("❌ Пожалуйста, введите ваши достижения")
+        return
+
     data = await state.get_data()
-    data["scores"] = scores
-    await state.clear()
+    data["achievements"] = achievements
 
+    direction = data.get('direction', 'не указано')
+    cities = data.get('cities', [])
+    cities_str = ', '.join(cities) if cities else 'не указаны'
+    scores_str = ', '.join([f"{subj} {score}" for subj, score in data.get('scores', {}).items()])
+    achievements_short = (achievements[:20] + '...') if len(achievements) > 20 else achievements
+
+    query_text = f"{direction} | {cities_str} | {scores_str} | Достижения: {achievements_short}"
+
+    await message.answer("🕒 Ищем вузы для вас...")
     recommendations = await generate_universities(data)
-    db.log_query(message.from_user.id, f"plan_{data['direction']}", recommendations)
 
-    await message.answer("🕒 Ищем вызу для вас...")
+    db.log_query(message.from_user.id, query_text, recommendations)
+    recommendations = re.sub(r'#\w+', '', recommendations)
     await message.answer("🎓 Подходящие вузы:")
     await message.answer(recommendations, parse_mode="Markdown")
 
-
+    await state.clear()
