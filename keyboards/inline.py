@@ -26,10 +26,10 @@ LOCATION_KB = LOCATION_KB_BUILDER.as_markup()
 DIRECTION_KB_BUILDER = InlineKeyboardBuilder()
 DIRECTION_KB_BUILDER.add(
     InlineKeyboardButton(text="🧑‍💻 IT", callback_data="direction:it"),
-    InlineKeyboardButton(text="📈 Экономика", callback_data="direction:econ"),
-    InlineKeyboardButton(text="🩺 Медицина", callback_data="direction:med"),
-    InlineKeyboardButton(text="🧑‍🏫 Педагогика", callback_data="direction:ped"),
-    InlineKeyboardButton(text="Юриспруденция", callback_data="direction:urisp")
+    InlineKeyboardButton(text="📈 Экономика", callback_data="direction:economica"),
+    InlineKeyboardButton(text="🩺 Медицина", callback_data="direction:medicina"),
+    InlineKeyboardButton(text="🧑‍🏫 Педагогика", callback_data="direction:pedogogicka"),
+    InlineKeyboardButton(text="Юриспруденция", callback_data="direction:urispidentsia")
 )
 DIRECTION_KB_BUILDER.add(InlineKeyboardButton(text="🔙 Назад", callback_data="main_menu"))
 DIRECTION_KB_BUILDER.adjust(2)
