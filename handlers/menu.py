@@ -179,6 +179,6 @@ async def process_achievements(message: Message, state: FSMContext):
     db.log_query(message.from_user.id, query_text, recommendations)
     recommendations = re.sub(r'#\w+', '', recommendations)
     await message.answer("🎓 Подходящие вузы:")
-    await message.answer(recommendations, parse_mode="Markdown")
+    await message.answer(recommendations, parse_mode="Markdown", reply_markup=MAIN_MENU_KB)
 
     await state.clear()
